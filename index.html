@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ding">
+<meta name="theme-color" content="#091316" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#EDF2F0" media="(prefers-color-scheme: light)">
+<style>:root{color-scheme:light dark;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Ding</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one column of line cards, each led by a huge minute countdown and a 0-30 min strip; setup happens in a bottom sheet. */
+:root {
+  --bg: #EDF2F0;
+  --surface: #FFFFFF;
+  --ink: #0E1C20;
+  --muted: #58696E;
+  --line: #D3DDDA;
+  --accent: #F7A600;
+  --on-accent: #1B1300;
+  --go: #0B8F5F;
+  --warn: #B3261E;
+  --shade: rgba(14, 28, 32, .16);
+  --veil: rgba(9, 19, 22, .5);
+  --r1: #FFB41F; --r2: #FF7A59; --r3: #4FC3F7; --r4: #B39DFF; --r5: #6FDB9B; --r6: #FF8DB5;
+  --on-badge: #10181B;
+  --font-num: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --font-body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #091316; --surface: #122126; --ink: #E9F2F0; --muted: #8CA2A7; --line: #213439;
+    --accent: #FFB61E; --on-accent: #1B1300; --go: #3FE0A0; --warn: #FF8A80;
+    --shade: rgba(0, 0, 0, .55); --veil: rgba(0, 0, 0, .62);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #091316; --surface: #122126; --ink: #E9F2F0; --muted: #8CA2A7; --line: #213439;
+  --accent: #FFB61E; --on-accent: #1B1300; --go: #3FE0A0; --warn: #FF8A80;
+  --shade: rgba(0, 0, 0, .55); --veil: rgba(0, 0, 0, .62);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.4;
+  padding-block: 16px 132px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  -webkit-tap-highlight-color: transparent;
+}
+body.lock { overflow: hidden; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 560px; margin-inline: auto; display: flex; flex-direction: column; gap: 16px; }
+
+/* Header */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand svg { width: 40px; height: 40px; flex: none; }
+.lg-a { fill: var(--accent); }
+.lg-b { fill: var(--on-accent); }
+.lg-w { fill: none; stroke: var(--on-accent); stroke-width: 2; stroke-linecap: round; }
+.word { font-family: var(--font-num); font-weight: 800; font-size: 34px; letter-spacing: .02em; line-height: 1; text-transform: lowercase; }
+.pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface);
+  font-weight: 600; font-size: 14px;
+}
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+.pill[data-mode="live"] .dot { background: var(--go); animation: beat 2s ease-in-out infinite; }
+.pill[data-mode="demo"] .dot { background: var(--accent); }
+@keyframes beat { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+.meta { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.meta h1 { margin: 0; font-family: var(--font-num); font-weight: 700; font-size: 40px; line-height: 1; text-wrap: balance; }
+.meta p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+.meta .text { min-width: 0; }
+.icon-btn {
+  width: 48px; height: 48px; flex: none; border-radius: 14px;
+  display: grid; place-items: center;
+  background: var(--surface); border: 1px solid var(--line);
+}
+.icon-btn svg { width: 22px; height: 22px; }
+.icon-btn.spin svg { animation: turn .9s linear infinite; }
+@keyframes turn { to { transform: rotate(360deg); } }
+
+.banner {
+  margin: 0; padding: 12px 14px; border-radius: 14px;
+  background: var(--surface); border: 1px dashed var(--accent);
+  font-size: 14px; color: var(--ink);
+}
+.banner strong { font-weight: 700; }
+
+/* Cards */
+.list { display: flex; flex-direction: column; gap: 14px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 22px; padding: 16px;
+  box-shadow: 0 12px 28px -20px var(--shade);
+  display: flex; flex-direction: column; gap: 14px;
+  min-width: 0;
+}
+.card-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.badge {
+  min-width: 68px; height: 50px; padding-inline: 12px;
+  border-radius: 12px; display: grid; place-items: center;
+  font-family: var(--font-num); font-weight: 800; font-size: 31px; line-height: 1;
+  color: var(--on-badge); background: var(--r1);
+}
+.c0 { background: var(--r1); } .c1 { background: var(--r2); } .c2 { background: var(--r3); }
+.c3 { background: var(--r4); } .c4 { background: var(--r5); } .c5 { background: var(--r6); }
+.head-text { min-width: 0; }
+.dest { margin: 0; font-weight: 700; font-size: 16px; overflow-wrap: anywhere; }
+.stop { margin: 2px 0 0; color: var(--muted); font-size: 14px; display: flex; align-items: center; gap: 5px; min-width: 0; }
+.stop svg { width: 14px; height: 14px; flex: none; }
+.stop span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.head-actions { display: flex; gap: 6px; }
+.mini {
+  width: 44px; height: 44px; border-radius: 12px;
+  display: grid; place-items: center;
+  background: transparent; border: 1px solid var(--line);
+}
+.mini svg { width: 20px; height: 20px; }
+.mini:active, .icon-btn:active, .pill:active { transform: scale(.96); }
+
+.eta-zone { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.eta-main { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.eta-big { display: flex; align-items: baseline; gap: 8px; }
+.num {
+  font-family: var(--font-num); font-weight: 800; font-size: 84px; line-height: .85;
+  font-variant-numeric: tabular-nums; letter-spacing: -.01em;
+}
+.unit { font-family: var(--font-num); font-weight: 600; font-size: 24px; color: var(--muted); }
+.arrive { font-family: var(--font-num); font-weight: 800; font-size: 60px; line-height: .9; color: var(--go); display: flex; align-items: center; gap: 12px; }
+.arrive i { width: 14px; height: 14px; border-radius: 50%; background: var(--go); animation: beat 1.1s ease-in-out infinite; }
+.next { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.next small { color: var(--muted); font-size: 13px; font-weight: 600; }
+.chip {
+  font-family: var(--font-num); font-weight: 700; font-size: 24px; line-height: 1;
+  padding: 7px 12px; border-radius: 10px;
+  background: var(--bg); border: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+.chip em { font-style: normal; font-size: 15px; color: var(--muted); margin-left: 3px; font-weight: 600; }
+
+.tl { padding-inline: 8px; }
+.tl-track { position: relative; height: 22px; }
+.tl-track::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 4px; margin-top: -2px; border-radius: 2px; background: var(--line); }
+.bus { position: absolute; top: 50%; left: var(--pos); width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--muted); }
+.bus.first { width: 20px; height: 20px; margin: -10px 0 0 -10px; background: var(--accent); box-shadow: 0 0 0 4px var(--surface), 0 0 0 6px var(--accent); }
+.tl-scale { display: flex; justify-content: space-between; margin-top: 4px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+
+.note { margin: 0; color: var(--muted); font-size: 14px; }
+.note.warn { color: var(--warn); }
+.cta {
+  min-height: 52px; border-radius: 14px; padding: 12px 16px;
+  background: var(--accent); color: var(--on-accent); border: 0;
+  font-weight: 700; font-size: 16px;
+}
+.sk { height: 62px; border-radius: 12px; background: linear-gradient(90deg, var(--line), var(--bg), var(--line)); background-size: 200% 100%; animation: sweep 1.4s linear infinite; }
+@keyframes sweep { to { background-position: -200% 0; } }
+
+.empty-state { text-align: center; padding: 28px 16px; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.empty-state h2 { margin: 0; font-family: var(--font-num); font-size: 30px; font-weight: 700; }
+.empty-state p { margin: 0; color: var(--muted); max-width: 32ch; }
+
+/* Add button */
+.fab-wrap {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; pointer-events: none;
+  display: flex; justify-content: center;
+  padding: 0 max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+.fab {
+  pointer-events: auto; display: inline-flex; align-items: center; gap: 10px;
+  min-height: 56px; padding: 0 26px; border-radius: 999px; border: 0;
+  background: var(--accent); color: var(--on-accent);
+  font-weight: 700; font-size: 17px;
+  box-shadow: 0 14px 30px -12px var(--shade), 0 0 0 4px var(--bg);
+}
+.fab svg { width: 22px; height: 22px; }
+.fab:active { transform: scale(.97); }
+
+/* Bottom sheet */
+.sheet { position: fixed; inset: 0; z-index: 20; background: var(--veil); display: flex; align-items: flex-end; justify-content: center; }
+.panel {
+  width: 100%; max-width: 560px; max-height: 88vh; max-height: 88dvh;
+  background: var(--surface); color: var(--ink);
+  border-radius: 26px 26px 0 0;
+  display: flex; flex-direction: column;
+  animation: rise .22s ease-out;
+}
+@keyframes rise { from { transform: translateY(40px); opacity: .4; } }
+.panel-head {
+  display: flex; align-items: center; gap: 8px; padding: 14px 12px 8px 12px;
+  padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px));
+}
+.panel-head h2 { margin: 0; flex: 1; min-width: 0; font-family: var(--font-num); font-size: 28px; font-weight: 700; line-height: 1.05; padding-left: 8px; text-wrap: balance; }
+.panel-head .icon-btn { border: 0; background: var(--bg); }
+.panel-body {
+  overflow-y: auto; padding: 8px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 14px;
+}
+.lbl { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.field { display: flex; gap: 8px; }
+.input {
+  flex: 1; min-width: 0; height: 56px; padding: 0 16px; border-radius: 14px;
+  border: 2px solid var(--line); background: var(--bg); font-size: 20px; font-weight: 600;
+}
+.input:focus { border-color: var(--accent); outline: none; }
+.field .cta { height: 56px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pick-chip {
+  min-height: 48px; padding: 0 18px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--bg);
+  font-family: var(--font-num); font-weight: 800; font-size: 26px;
+}
+.dir-btn {
+  width: 100%; text-align: left; padding: 16px; border-radius: 16px; border: 2px solid var(--line); background: var(--bg);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.dir-btn strong { font-size: 18px; overflow-wrap: anywhere; }
+.dir-btn span { color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+.dir-btn:active { border-color: var(--accent); }
+.err { margin: 0; color: var(--warn); font-weight: 600; font-size: 15px; }
+.stops { list-style: none; margin: 0; padding: 0; }
+.stops li { position: relative; }
+.stops li::before { content: ""; position: absolute; left: 15px; top: 0; bottom: 0; width: 4px; background: var(--line); }
+.stops li:first-child::before { top: 50%; }
+.stops li:last-child::before { bottom: 50%; }
+.stop-btn {
+  position: relative; width: 100%; min-height: 54px; padding: 8px 10px 8px 44px;
+  text-align: left; background: transparent; border: 0; border-radius: 12px;
+  font-size: 16px; font-weight: 500; overflow-wrap: anywhere;
+}
+.stop-btn::before {
+  content: ""; position: absolute; left: 9px; top: 50%; width: 16px; height: 16px; margin-top: -8px;
+  border-radius: 50%; background: var(--surface); border: 4px solid var(--muted);
+}
+.stop-btn:active, .stop-btn[aria-current="true"] { background: var(--bg); }
+.stop-btn[aria-current="true"]::before { border-color: var(--accent); }
+.stop-btn small { display: block; color: var(--muted); font-size: 12px; }
+.menu-btn {
+  width: 100%; min-height: 56px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg);
+  text-align: left; padding: 0 16px; font-weight: 600; font-size: 16px;
+}
+.menu-btn.danger { color: var(--warn); }
+.menu-btn.sure { background: var(--warn); color: #fff; border-color: var(--warn); }
+
+@media (min-width: 640px) {
+  .sheet { align-items: center; }
+  .panel { border-radius: 26px; }
+}
+@media (max-width: 380px) {
+  .num { font-size: 72px; }
+  .badge { min-width: 60px; font-size: 27px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 40 40" aria-hidden="true">
+        <rect class="lg-a" width="40" height="40" rx="11"/>
+        <rect class="lg-b" x="8" y="13" width="22" height="18" rx="4.5"/>
+        <rect class="lg-a" x="11" y="16" width="16" height="7" rx="2"/>
+        <circle class="lg-a" cx="14.5" cy="27" r="1.7"/>
+        <circle class="lg-a" cx="23.5" cy="27" r="1.7"/>
+        <path class="lg-w" d="M30 6.5c2.6.5 4.3 2.3 4.8 4.8"/>
+        <path class="lg-w" d="M30.5 2.5c4.6.7 7.3 3.6 8 8.3"/>
+      </svg>
+      <span class="word">ding</span>
+    </div>
+    <button class="pill" id="status" data-mode="probing" type="button" aria-label="Actualiser les horaires">
+      <span class="dot"></span><span id="statusText">Connexion</span>
+    </button>
+  </header>
+
+  <div class="meta">
+    <div class="text">
+      <h1>Mes bus</h1>
+      <p id="clock">&nbsp;</p>
+    </div>
+    <button class="icon-btn" id="refresh" type="button" aria-label="Actualiser">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+    </button>
+  </div>
+
+  <p class="banner" id="banner" hidden><strong>Horaires simulés.</strong> Cette page ne peut pas joindre les données Citybus ici. Ouvre la version hébergée de Ding sur ton téléphone pour voir les vrais passages.</p>
+
+  <main class="list" id="list" aria-live="polite"></main>
+</div>
+
+<div class="fab-wrap">
+  <button class="fab" id="add" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    Ajouter une ligne
+  </button>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="panel" id="panel" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var BASE = 'https://rt.data.gov.hk/v2/transport/citybus';
+  var PRESETS = ['37A', '90', '5X', '26'];
+  var KEY_LINES = 'ding.lines.v1', KEY_NAMES = 'ding.names.v1';
+
+  var S = { lines: [], mode: 'probing', data: {}, info: {}, names: {}, sheet: null, updatedAt: 0, busy: false, token: 0 };
+  var lastFocus = null;
+
+  function $(s) { return document.querySelector(s); }
+  function store(get, key, val) {
+    try { if (get) { var v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+    return null;
+  }
+  function h(tag, props) {
+    var el = document.createElement(tag);
+    props = props || {};
+    Object.keys(props).forEach(function (k) {
+      var v = props[k];
+      if (v === false || v == null) return;
+      if (k === 'class') el.className = v;
+      else if (k === 'on') Object.keys(v).forEach(function (ev) { el.addEventListener(ev, v[ev]); });
+      else el.setAttribute(k, v === true ? '' : v);
+    });
+    for (var i = 2; i < arguments.length; i++) append(el, arguments[i]);
+    return el;
+  }
+  function append(el, k) {
+    if (k == null || k === false) return;
+    if (Array.isArray(k)) { k.forEach(function (x) { append(el, x); }); return; }
+    el.append(k.nodeType ? k : document.createTextNode(String(k)));
+  }
+  function svg(path, extra) {
+    var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    s.setAttribute('viewBox', '0 0 24 24');
+    s.setAttribute('fill', 'none');
+    s.setAttribute('stroke', 'currentColor');
+    s.setAttribute('stroke-width', '2.2');
+    s.setAttribute('stroke-linecap', 'round');
+    s.setAttribute('stroke-linejoin', 'round');
+    s.setAttribute('aria-hidden', 'true');
+    path.split('|').forEach(function (d) {
+      var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      p.setAttribute('d', d);
+      s.appendChild(p);
+    });
+    return s;
+  }
+  var ICON = {
+    swap: 'M7 4 3 8l4 4|M3 8h14|M17 20l4-4-4-4|M21 16H7',
+    more: 'M5 12h.01|M12 12h.01|M19 12h.01',
+    pin: 'M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z|M12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+    close: 'M6 6l12 12M18 6 6 18',
+    back: 'M15 5l-7 7 7 7'
+  };
+
+  /* ---------- Data ---------- */
+  async function api(path, ms) {
+    var ctl = new AbortController();
+    var t = setTimeout(function () { ctl.abort(); }, ms || 9000);
+    try {
+      var r = await fetch(BASE + path, { signal: ctl.signal });
+      if (!r.ok) throw new Error('http ' + r.status);
+      var j = await r.json();
+      return j.data;
+    } finally { clearTimeout(t); }
+  }
+  async function pool(items, size, fn) {
+    var i = 0;
+    async function worker() { while (i < items.length) { var it = items[i++]; await fn(it); } }
+    var ws = [];
+    for (var k = 0; k < Math.min(size, items.length); k++) ws.push(worker());
+    await Promise.all(ws);
+  }
+  async function getInfo(route) {
+    if (S.info[route]) return S.info[route];
+    if (S.mode === 'demo') return (S.info[route] = { route: route, orig: 'Départ', dest: 'Terminus' });
+    var d = await api('/route/CTB/' + encodeURIComponent(route));
+    if (d && d.route) return (S.info[route] = { route: d.route, orig: d.orig_en || d.orig_tc, dest: d.dest_en || d.dest_tc });
+    return null;
+  }
+  async function getStops(route, dir) {
+    if (S.mode === 'demo') {
+      return Array.from({ length: 12 }, function (_, i) { return { id: 'demo' + i, seq: i + 1, name: 'Arrêt exemple ' + (i + 1) }; });
+    }
+    var rs = (await api('/route-stop/CTB/' + encodeURIComponent(route) + '/' + dir)) || [];
+    rs.sort(function (a, b) { return a.seq - b.seq; });
+    var missing = rs.filter(function (s) { return !S.names[s.stop]; });
+    await pool(missing, 10, async function (s) {
+      try { var d = await api('/stop/' + s.stop); S.names[s.stop] = (d && (d.name_en || d.name_tc)) || s.stop; } catch (e) {}
+    });
+    store(false, KEY_NAMES, S.names);
+    return rs.map(function (s) { return { id: s.stop, seq: s.seq, name: S.names[s.stop] || ('Arrêt ' + s.seq) }; });
+  }
+  function hash(str) { var x = 0; for (var i = 0; i < str.length; i++) x = (x * 31 + str.charCodeAt(i)) >>> 0; return x; }
+  function demoTimes(l) {
+    var hh = hash(l.route + l.dir);
+    var period = (6 + (hh % 9)) * 60;
+    var offset = (hh * 37) % period;
+    var now = Date.now() / 1000;
+    var first = Math.ceil((now - offset) / period) * period + offset;
+    return [first, first + period, first + 2 * period].map(function (s) { return s * 1000; });
+  }
+  var DEMO_STOP = { id: 'demo', name: 'Ton arrêt (exemple)' };
+  function stopOf(l) { return l.stops[l.dir] || (S.mode === 'demo' ? DEMO_STOP : null); }
+  function keyOf(l) { return l.route + '|' + l.dir; }
+
+  async function refreshLine(l) {
+    var stop = stopOf(l);
+    if (!stop) return;
+    try { await getInfo(l.route); } catch (e) {}
+    var key = keyOf(l);
+    if (S.mode === 'demo') { S.data[key] = { times: demoTimes(l), at: Date.now() }; return; }
+    try {
+      var data = (await api('/eta/CTB/' + stop.id + '/' + encodeURIComponent(l.route))) || [];
+      var d = l.dir === 'outbound' ? 'O' : 'I';
+      var times = data.filter(function (e) { return e.dir === d && e.eta; })
+        .map(function (e) { return Date.parse(e.eta); })
+        .filter(function (n) { return !isNaN(n); })
+        .sort(function (a, b) { return a - b; });
+      S.data[key] = { times: times, at: Date.now() };
+    } catch (e) {
+      var prev = S.data[key];
+      S.data[key] = { times: prev ? prev.times : [], at: prev ? prev.at : 0, err: true };
+    }
+  }
+  async function refreshAll() {
+    if (S.busy || S.mode === 'probing') return;
+    S.busy = true; paintStatus();
+    await Promise.all(S.lines.map(refreshLine));
+    S.busy = false; S.updatedAt = Date.now();
+    render(); paintStatus();
+  }
+
+  /* ---------- Cards ---------- */
+  function mins(t, now) { return Math.floor((t - now) / 60000); }
+  function etaZone(l) {
+    var z = h('div', { class: 'eta-zone' });
+    var stop = stopOf(l);
+    if (!stop) {
+      z.append(h('button', { class: 'cta', type: 'button', on: { click: function () { openSheet({ step: 'stop', route: l.route, dir: l.dir }); } } }, 'Choisir mon arrêt'));
+      return z;
+    }
+    var d = S.data[keyOf(l)];
+    if (!d) { z.append(h('div', { class: 'sk' })); return z; }
+    var now = Date.now();
+    var ts = (d.times || []).filter(function (t) { return t > now - 30000; });
+    if (!ts.length) {
+      z.append(h('p', { class: d.err ? 'note warn' : 'note' }, d.err ? 'Données indisponibles pour le moment. Nouvelle tentative automatique.' : 'Aucun bus annoncé pour le moment.'));
+      return z;
+    }
+    var m = ts.map(function (t) { return mins(t, now); });
+    var big = m[0] <= 0
+      ? h('div', { class: 'arrive' }, h('i'), 'Arrive')
+      : h('div', { class: 'eta-big' }, h('span', { class: 'num' }, String(m[0])), h('span', { class: 'unit' }, 'min'));
+    var nextEls = m.slice(1, 3).map(function (v) { return h('span', { class: 'chip' }, v <= 0 ? 'Now' : String(v), v <= 0 ? null : h('em', {}, 'min')); });
+    var main = h('div', { class: 'eta-main' }, big, nextEls.length ? h('div', { class: 'next' }, h('small', {}, 'puis'), nextEls) : null);
+    var track = h('div', { class: 'tl-track' });
+    m.forEach(function (v, i) {
+      if (v > 30) return;
+      var pos = Math.max(0, v) / 30 * 100;
+      track.append(h('span', { class: 'bus' + (i === 0 ? ' first' : ''), style: '--pos:' + pos + '%' }));
+    });
+    var tl = h('div', { class: 'tl', 'aria-hidden': 'true' }, track,
+      h('div', { class: 'tl-scale' }, h('span', {}, '0'), h('span', {}, '10'), h('span', {}, '20'), h('span', {}, '30 min')));
+    z.append(main, tl);
+    if (d.err) z.append(h('p', { class: 'note warn' }, 'Dernière mise à jour impossible, données précédentes affichées.'));
+    return z;
+  }
+  function card(l, idx) {
+    var info = S.info[l.route];
+    var destName = info ? (l.dir === 'outbound' ? info.dest : info.orig) : '…';
+    var stop = stopOf(l);
+    var other = l.dir === 'outbound' ? 'retour' : 'aller';
+    var el = h('article', { class: 'card', 'data-route': l.route },
+      h('div', { class: 'card-head' },
+        h('div', { class: 'badge c' + (hash(l.route) % 6) }, l.route),
+        h('div', { class: 'head-text' },
+          h('p', { class: 'dest' }, 'vers ' + destName),
+          h('p', { class: 'stop' }, svg(ICON.pin), h('span', {}, stop ? stop.name : 'Arrêt à choisir'))),
+        h('div', { class: 'head-actions' },
+          h('button', { class: 'mini', type: 'button', 'aria-label': 'Passer au sens ' + other + ' de la ligne ' + l.route, on: { click: function () { swap(l); } } }, svg(ICON.swap)),
+          h('button', { class: 'mini', type: 'button', 'aria-label': 'Options de la ligne ' + l.route, on: { click: function () { openSheet({ step: 'menu', route: l.route, dir: l.dir }); } } }, svg(ICON.more)))),
+      etaZone(l));
+    return el;
+  }
+  function render() {
+    var list = $('#list');
+    list.replaceChildren();
+    if (!S.lines.length) {
+      list.append(h('div', { class: 'card empty-state' },
+        h('h2', {}, 'Aucune ligne'),
+        h('p', {}, 'Ajoute ta première ligne Citybus pour voir les prochains passages ici.'),
+        h('button', { class: 'cta', type: 'button', on: { click: function () { openSheet({ step: 'line' }); } } }, 'Ajouter une ligne')));
+      return;
+    }
+    S.lines.forEach(function (l, i) { list.append(card(l, i)); });
+  }
+  function tick() {
+    var now = Date.now();
+    document.querySelectorAll('.card[data-route]').forEach(function (el) {
+      var l = S.lines.find(function (x) { return x.route === el.getAttribute('data-route'); });
+      var z = el.querySelector('.eta-zone');
+      if (l && z) z.replaceWith(etaZone(l));
+    });
+    paintClock(); paintStatus();
+  }
+  function swap(l) {
+    l.dir = l.dir === 'outbound' ? 'inbound' : 'outbound';
+    persist(); render();
+    if (!stopOf(l)) openSheet({ step: 'stop', route: l.route, dir: l.dir, hint: 'Choisis ton arrêt pour ce sens.' });
+    else refreshLine(l).then(render);
+  }
+  function persist() { store(false, KEY_LINES, S.lines); }
+
+  /* ---------- Header ---------- */
+  function paintClock() {
+    var d = new Date();
+    var date = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Hong_Kong' }).format(d);
+    var time = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Hong_Kong' }).format(d);
+    var up = '';
+    if (S.updatedAt) {
+      var s = Math.round((Date.now() - S.updatedAt) / 1000);
+      up = s < 8 ? ' · à jour' : ' · mis à jour il y a ' + (s < 90 ? s + ' s' : Math.round(s / 60) + ' min');
+    }
+    $('#clock').textContent = date + ' · ' + time + up;
+  }
+  function paintStatus() {
+    var st = $('#status');
+    st.setAttribute('data-mode', S.mode);
+    $('#statusText').textContent = S.mode === 'live' ? 'Direct' : S.mode === 'demo' ? 'Démo' : 'Connexion';
+    $('#refresh').classList.toggle('spin', S.busy);
+    $('#banner').hidden = S.mode !== 'demo';
+  }
+
+  /* ---------- Sheet ---------- */
+  function openSheet(ctx) {
+    lastFocus = document.activeElement;
+    S.sheet = ctx; S.token++;
+    $('#sheet').hidden = false;
+    document.body.classList.add('lock');
+    draw();
+  }
+  function closeSheet() {
+    S.sheet = null; S.token++;
+    $('#sheet').hidden = true;
+    document.body.classList.remove('lock');
+    if (lastFocus && lastFocus.focus) try { lastFocus.focus(); } catch (e) {}
+  }
+  function head(title, back) {
+    return h('div', { class: 'panel-head' },
+      back ? h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Retour', on: { click: back } }, svg(ICON.back)) : null,
+      h('h2', { id: 'sheetTitle' }, title),
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Fermer', on: { click: closeSheet } }, svg(ICON.close)));
+  }
+  function setPanel(headEl, body) {
+    var p = $('#panel');
+    p.replaceChildren(headEl, h('div', { class: 'panel-body' }, body));
+  }
+  function draw() {
+    var c = S.sheet;
+    if (!c) return;
+    if (c.step === 'line') drawLine(c);
+    else if (c.step === 'dir') drawDir(c);
+    else if (c.step === 'stop') drawStop(c);
+    else if (c.step === 'menu') drawMenu(c);
+  }
+
+  function drawLine(c) {
+    var err = h('p', { class: 'err', hidden: !c.error }, c.error || '');
+    var input = h('input', { class: 'input', id: 'routeInput', type: 'text', autocapitalize: 'characters', autocomplete: 'off', autocorrect: 'off', spellcheck: 'false', enterkeyhint: 'go', maxlength: '6', placeholder: 'ex. 37A', 'aria-label': 'Numéro de ligne' });
+    var go = h('button', { class: 'cta', type: 'submit' }, 'Suivant');
+    var form = h('form', { class: 'field', on: { submit: function (e) { e.preventDefault(); chooseRoute(input.value, err, go); } } }, input, go);
+    var chips = h('div', { class: 'chips' }, PRESETS.map(function (r) {
+      return h('button', { class: 'pick-chip', type: 'button', on: { click: function () { chooseRoute(r, err, go); } } }, r);
+    }));
+    setPanel(head('Ajouter une ligne'),
+      [h('label', { class: 'lbl', for: 'routeInput' }, 'Numéro de ligne Citybus'), form, err,
+       h('span', { class: 'lbl' }, 'Raccourcis'), chips]);
+    setTimeout(function () { try { input.focus(); } catch (e) {} }, 60);
+  }
+  async function chooseRoute(raw, errEl, btn) {
+    var route = String(raw || '').trim().toUpperCase().replace(/\s+/g, '');
+    if (!route) { errEl.hidden = false; errEl.textContent = 'Saisis un numéro de ligne.'; return; }
+    btn.disabled = true; btn.textContent = 'Recherche…';
+    var tok = S.token;
+    try {
+      var info = await getInfo(route);
+      if (tok !== S.token) return;
+      if (!info) { errEl.hidden = false; errEl.textContent = 'La ligne ' + route + ' n’existe pas chez Citybus.'; btn.disabled = false; btn.textContent = 'Suivant'; return; }
+      S.sheet = { step: 'dir', route: info.route || route };
+      draw();
+    } catch (e) {
+      if (tok !== S.token) return;
+      errEl.hidden = false; errEl.textContent = 'Connexion impossible. Vérifie ton réseau puis réessaie.';
+      btn.disabled = false; btn.textContent = 'Suivant';
+    }
+  }
+  function drawDir(c) {
+    var info = S.info[c.route] || { orig: 'Départ', dest: 'Terminus' };
+    function btn(dir, dest, orig) {
+      return h('button', { class: 'dir-btn', type: 'button', on: { click: function () { S.sheet = { step: 'stop', route: c.route, dir: dir, back: 'dir' }; draw(); } } },
+        h('strong', {}, 'vers ' + dest), h('span', {}, 'depuis ' + orig));
+    }
+    setPanel(head('Ligne ' + c.route, function () { S.sheet = { step: 'line' }; draw(); }),
+      [h('span', { class: 'lbl' }, 'Quel sens ?'), btn('outbound', info.dest, info.orig), btn('inbound', info.orig, info.dest)]);
+  }
+  function drawStop(c) {
+    var line = S.lines.find(function (x) { return x.route === c.route; });
+    var current = line && line.stops[c.dir] ? line.stops[c.dir].id : null;
+    var info = S.info[c.route];
+    var title = 'Ton arrêt · ' + c.route;
+    var back = c.back === 'dir' ? function () { S.sheet = { step: 'dir', route: c.route }; draw(); } : null;
+    var listEl = h('ol', { class: 'stops' });
+    var filter = h('input', { class: 'input', id: 'stopFilter', type: 'search', autocomplete: 'off', placeholder: 'Filtrer par nom d’arrêt', 'aria-label': 'Filtrer les arrêts', style: 'font-size:17px;height:50px' });
+    var state = h('p', { class: 'note' }, 'Chargement des arrêts…');
+    var stops = [];
+    function paintList() {
+      var q = filter.value.trim().toLowerCase();
+      listEl.replaceChildren();
+      stops.filter(function (s) { return !q || s.name.toLowerCase().indexOf(q) !== -1; }).forEach(function (s) {
+        listEl.append(h('li', {}, h('button', { class: 'stop-btn', type: 'button', 'aria-current': s.id === current ? 'true' : null, on: { click: function () { choose(c, s); } } },
+          s.name, h('small', {}, 'Arrêt n° ' + s.seq))));
+      });
+    }
+    filter.addEventListener('input', paintList);
+    var dirTxt = info ? 'Sens : vers ' + (c.dir === 'outbound' ? info.dest : info.orig) : '';
+    setPanel(head(title, back), [c.hint ? h('p', { class: 'note' }, c.hint) : null, dirTxt ? h('p', { class: 'note' }, dirTxt) : null, filter, state, listEl]);
+    var tok = S.token;
+    getStops(c.route, c.dir).then(function (r) {
+      if (tok !== S.token) return;
+      stops = r;
+      state.hidden = r.length > 0;
+      if (!r.length) { state.hidden = false; state.textContent = 'Aucun arrêt trouvé pour ce sens.'; }
+      paintList();
+      var cur = listEl.querySelector('[aria-current="true"]');
+      if (cur) cur.scrollIntoView({ block: 'center' });
+    }).catch(function () {
+      if (tok !== S.token) return;
+      state.className = 'err'; state.textContent = 'Impossible de charger les arrêts. Réessaie dans un instant.';
+    });
+  }
+  function choose(c, stop) {
+    var l = S.lines.find(function (x) { return x.route === c.route; });
+    if (!l) { l = { route: c.route, dir: c.dir, stops: {} }; S.lines.push(l); }
+    l.dir = c.dir;
+    l.stops[c.dir] = { id: stop.id, name: stop.name };
+    persist(); closeSheet(); render(); refreshAll();
+  }
+  function drawMenu(c) {
+    var l = S.lines.find(function (x) { return x.route === c.route; });
+    if (!l) { closeSheet(); return; }
+    var del = h('button', { class: 'menu-btn danger', type: 'button', on: { click: function () {
+      if (!c.sure) { S.sheet = { step: 'menu', route: c.route, dir: c.dir, sure: true }; draw(); return; }
+      S.lines = S.lines.filter(function (x) { return x.route !== c.route; });
+      persist(); closeSheet(); render();
+    } } }, c.sure ? 'Appuie encore pour supprimer la ligne ' + c.route : 'Supprimer la ligne ' + c.route);
+    if (c.sure) del.className = 'menu-btn sure';
+    setPanel(head('Ligne ' + c.route),
+      [h('button', { class: 'menu-btn', type: 'button', on: { click: function () { S.sheet = { step: 'stop', route: c.route, dir: l.dir }; draw(); } } }, 'Changer l’arrêt de ce sens'),
+       h('button', { class: 'menu-btn', type: 'button', on: { click: function () { closeSheet(); swap(l); } } }, 'Passer à l’autre sens'),
+       del]);
+  }
+
+  /* ---------- Boot ---------- */
+  function boot() {
+    var saved = store(true, KEY_LINES);
+    S.lines = Array.isArray(saved) && saved.length ? saved : PRESETS.map(function (r) { return { route: r, dir: 'outbound', stops: {} }; });
+    S.names = store(true, KEY_NAMES) || {};
+    paintClock(); paintStatus(); render();
+
+    $('#add').addEventListener('click', function () { openSheet({ step: 'line' }); });
+    $('#refresh').addEventListener('click', refreshAll);
+    $('#status').addEventListener('click', refreshAll);
+    $('#sheet').addEventListener('click', function (e) { if (e.target.id === 'sheet') closeSheet(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && S.sheet) closeSheet(); });
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) refreshAll(); });
+
+    api('/route/CTB/37A', 8000).then(function () { S.mode = 'live'; }, function () { S.mode = 'demo'; })
+      .then(function () { paintStatus(); return refreshAll(); });
+    setInterval(tick, 10000);
+    setInterval(function () { if (!document.hidden) refreshAll(); }, 30000);
+  }
+  boot();
+})();
+</script>
+
+</body>
+</html>
