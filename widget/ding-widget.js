@@ -150,7 +150,7 @@ async function pickStop(route, dir) {
 
   const head = new UITableRow();
   head.isHeader = true;
-  head.addText(`${route} : touche ton arrêt, puis ferme la liste`);
+  head.addText(`${route}: tap your stop, then close the list`);
   table.addRow(head);
 
   const rows = stops.map((s) => {
@@ -180,16 +180,16 @@ async function setupLine(routeInput) {
     info = await api(`/route/CTB/${route}`);
   } catch (e) {}
   if (!info || !info.route) {
-    await notify("Ligne introuvable", `Citybus ${route} n'existe pas.`);
+    await notify("Route not found", `Citybus ${route} doesn't exist.`);
     return null;
   }
 
   const a = new Alert();
   a.title = `Citybus ${route}`;
-  a.message = "Quel sens ?";
+  a.message = "Which direction?";
   a.addAction(`${info.orig_en} → ${info.dest_en}`);
   a.addAction(`${info.dest_en} → ${info.orig_en}`);
-  a.addCancelAction("Annuler");
+  a.addCancelAction("Cancel");
   const i = await a.presentSheet();
   if (i < 0) return null;
 
@@ -235,7 +235,7 @@ async function buildWidget(state) {
   word.font = numFont(19);
   word.textColor = C.ink;
   header.addSpacer();
-  const time = new Date().toLocaleTimeString("fr-FR", {
+  const time = new Date().toLocaleTimeString("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
     timeZone: "Asia/Hong_Kong",
@@ -271,7 +271,7 @@ async function buildWidget(state) {
     col.layoutVertically();
 
     if (!small) {
-      const st = col.addText(l.stopName || "Arrêt à choisir");
+      const st = col.addText(l.stopName || "No stop chosen");
       st.font = Font.systemFont(9);
       st.textColor = C.muted;
       st.lineLimit = 1;
@@ -282,24 +282,24 @@ async function buildWidget(state) {
     line.layoutHorizontally();
     line.bottomAlignContent();
     if (r === null) {
-      const t = line.addText("Ouvre le script");
+      const t = line.addText("Open the script");
       t.font = Font.boldSystemFont(12);
       t.textColor = C.muted;
     } else if (r === "err") {
-      const t = line.addText("Hors ligne");
+      const t = line.addText("Offline");
       t.font = Font.boldSystemFont(12);
       t.textColor = C.warn;
     } else if (r.length === 0) {
-      const t = line.addText("Pas de bus");
+      const t = line.addText("No buses");
       t.font = Font.boldSystemFont(12);
       t.textColor = C.muted;
     } else if (r[0] <= 0) {
-      const t = line.addText("Arrive");
+      const t = line.addText("Arriving");
       t.font = numFont(24);
       t.textColor = C.go;
       if (r.length > 1) {
         line.addSpacer(8);
-        const n = line.addText("puis " + r.slice(1, 3).map((m) => (m <= 0 ? "now" : m)).join(" · "));
+        const n = line.addText("then " + r.slice(1, 3).map((m) => (m <= 0 ? "now" : m)).join(" · "));
         n.font = numFont(14);
         n.textColor = C.muted;
       }
@@ -330,16 +330,16 @@ async function buildWidget(state) {
 // ---------- Menu dans l'app ----------
 async function askUrl(state) {
   const ask = new Alert();
-  ask.title = "Lien de l'app Ding";
-  ask.message = "Colle ici le lien de ta web app (GitHub Pages). Un tap sur le widget l'ouvrira.";
-  ask.addTextField("https://pseudo.github.io/ding/", state.url || "");
-  ask.addAction("Enregistrer");
-  ask.addCancelAction("Annuler");
+  ask.title = "Ding app link";
+  ask.message = "Paste your web app link (GitHub Pages). Tapping the widget will open it.";
+  ask.addTextField("https://username.github.io/Ding/", state.url || "");
+  ask.addAction("Save");
+  ask.addCancelAction("Cancel");
   const res = await ask.presentAlert();
   if (res !== 0) return;
   const v = ask.textFieldValue(0).trim();
   if (v && !/^https?:\/\//i.test(v)) {
-    await notify("Lien invalide", "Le lien doit commencer par https://");
+    await notify("Invalid link", "The link must start with https://");
     return;
   }
   state.url = v;
@@ -365,14 +365,14 @@ async function appMain() {
     const a = new Alert();
     a.title = "Ding · Citybus HK";
     a.message =
-      state.lines.map((l) => `${l.route} · ${l.stopName || "arrêt à choisir"}`).join("\n") +
-      `\n\nApp web : ${state.url || "non réglée"}`;
-    a.addAction("Aperçu du widget");
-    a.addAction("Ajouter / modifier une ligne");
-    a.addAction("Supprimer une ligne");
-    a.addAction("Lien de l'app web");
-    a.addAction("Ouvrir l'app web");
-    a.addCancelAction("Fermer");
+      state.lines.map((l) => `${l.route} · ${l.stopName || "no stop chosen"}`).join("\n") +
+      `\n\nWeb app: ${state.url || "not set"}`;
+    a.addAction("Preview widget");
+    a.addAction("Add / edit a route");
+    a.addAction("Remove a route");
+    a.addAction("Web app link");
+    a.addAction("Open web app");
+    a.addCancelAction("Close");
     const i = await a.presentAlert();
 
     if (i === 0) {
@@ -380,10 +380,10 @@ async function appMain() {
       await w.presentMedium();
     } else if (i === 1) {
       const ask = new Alert();
-      ask.title = "Numéro de ligne";
-      ask.addTextField("ex. 37A", "");
-      ask.addAction("Suivant");
-      ask.addCancelAction("Annuler");
+      ask.title = "Route number";
+      ask.addTextField("e.g. 37A", "");
+      ask.addAction("Next");
+      ask.addCancelAction("Cancel");
       const res = await ask.presentAlert();
       if (res === 0) {
         const value = ask.textFieldValue(0);
@@ -397,9 +397,9 @@ async function appMain() {
       }
     } else if (i === 2) {
       const del = new Alert();
-      del.title = "Supprimer quelle ligne ?";
+      del.title = "Remove which route?";
       state.lines.forEach((l) => del.addAction(l.route));
-      del.addCancelAction("Annuler");
+      del.addCancelAction("Cancel");
       const k = await del.presentSheet();
       if (k >= 0) {
         state.lines.splice(k, 1);
@@ -409,7 +409,7 @@ async function appMain() {
       await askUrl(state);
     } else if (i === 4) {
       if (state.url) Safari.open(state.url);
-      else await notify("Lien manquant", "Règle d'abord le lien de l'app web.");
+      else await notify("Missing link", "Set the web app link first.");
     } else {
       break;
     }

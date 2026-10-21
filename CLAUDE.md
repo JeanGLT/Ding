@@ -2,7 +2,7 @@
 
 Projet perso de Jean (utilisateur quotidien de Citybus à Wan Chai). L'app officielle est mauvaise, seule la donnée en direct est utile. Ding la remplace par une interface faite pour lui : seulement ses lignes, un gros compte à rebours, zéro menu.
 
-Langue de travail : français. Réponses courtes, ton naturel. Jean débute en code : explique les étapes qui demandent un clic de sa part (GitHub, iPhone, Scriptable), ne suppose rien.
+Langue de travail : français (on discute en français). **Tous les textes de l'app et du widget sont en anglais.** Réponses courtes, ton naturel. Jean débute en code : explique les étapes qui demandent un clic de sa part (GitHub, iPhone, Scriptable), ne suppose rien.
 
 ## Deux livrables
 
@@ -33,13 +33,13 @@ Les réponses sont de la forme `{ data: ... }`. Filtrer `eta` vide, garder le bo
 ## Comportements à garder
 
 - Lignes de départ : 37A, 90, 5X, 26 (Citybus uniquement). L'utilisateur choisit ses lignes, le sens (aller/retour) et son arrêt. Un arrêt mémorisé par sens et par ligne.
-- La web app détecte si l'API répond. Sinon elle passe en mode démo avec un bandeau « Horaires simulés ». En direct, rafraîchissement toutes les 30 s et au retour sur l'app.
+- La web app détecte si l'API répond. Sinon elle passe en mode démo avec un bandeau « Simulated times ». En direct, rafraîchissement toutes les 30 s et au retour sur l'app.
 - Le widget demande un rafraîchissement toutes les 5 min, mais iOS décide du moment réel (compter 5 à 15 min). À ne pas présenter comme du temps réel à la seconde.
 - Le widget ouvre la web app via `widget.url`. Sur les tailles moyen et grand, un seul lien pour tout le widget.
 
 ## État au départ de ce chantier
 
-- La web app a été écrite et publiée dans un environnement qui ne pouvait pas joindre l'API. **Les appels réels à l'API n'ont jamais été testés de bout en bout.** Première priorité : ouvrir https://jeanglt.github.io/Ding/ et vérifier que le bandeau « Horaires simulés » disparaît. Si l'API refuse les appels depuis la page (CORS), il faudra un petit relais (Cloudflare Worker gratuit).
+- La web app a été écrite et publiée dans un environnement qui ne pouvait pas joindre l'API. **Les appels réels à l'API n'ont jamais été testés de bout en bout.** Première priorité : ouvrir https://jeanglt.github.io/Ding/ et vérifier que le bandeau « Simulated times » disparaît. Si l'API refuse les appels depuis la page (CORS), il faudra un petit relais (Cloudflare Worker gratuit).
 - Jean a eu une erreur 404 sur GitHub Pages : le dépôt contient bien `index.html` à la racine, mais il faut vérifier que Pages est activé (Settings → Pages → Deploy from a branch → main → / root).
 - La ligne 5X n'a pas été vérifiée dans l'API (peut ne pas exister chez Citybus). Le code affiche une erreur claire si la ligne est introuvable.
 - Le widget Scriptable n'a pas été testé sur un iPhone.
@@ -65,4 +65,4 @@ Les réponses sont de la forme `{ data: ... }`. Filtrer `eta` vide, garder le bo
 - Garder `index.html` en un seul fichier tant que ça reste lisible.
 - Pas de dépendance npm, pas de framework, sauf besoin clair.
 - Tester avec les vraies données avant d'annoncer que ça marche. Dire ce qui n'a pas pu être testé.
-- Écrire les textes de l'interface en français, simples et directs.
+- Écrire les textes de l'interface en anglais, simples et directs. Les commentaires du code restent en français.

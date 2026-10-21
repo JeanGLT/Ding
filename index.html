@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -292,22 +292,22 @@ button { cursor: pointer; }
       </svg>
       <span class="word">ding</span>
     </div>
-    <button class="pill" id="status" data-mode="probing" type="button" aria-label="Actualiser les horaires">
-      <span class="dot"></span><span id="statusText">Connexion</span>
+    <button class="pill" id="status" data-mode="probing" type="button" aria-label="Refresh times">
+      <span class="dot"></span><span id="statusText">Connecting</span>
     </button>
   </header>
 
   <div class="meta">
     <div class="text">
-      <h1>Mes bus</h1>
+      <h1>My buses</h1>
       <p id="clock">&nbsp;</p>
     </div>
-    <button class="icon-btn" id="refresh" type="button" aria-label="Actualiser">
+    <button class="icon-btn" id="refresh" type="button" aria-label="Refresh">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
     </button>
   </div>
 
-  <p class="banner" id="banner" hidden><strong>Horaires simulés.</strong> Cette page ne peut pas joindre les données Citybus ici. Ouvre la version hébergée de Ding sur ton téléphone pour voir les vrais passages.</p>
+  <p class="banner" id="banner" hidden><strong>Simulated times.</strong> This page can’t reach Citybus data here. Open the hosted version of Ding on your phone to see real arrivals.</p>
 
   <main class="list" id="list" aria-live="polite"></main>
 </div>
@@ -315,7 +315,7 @@ button { cursor: pointer; }
 <div class="fab-wrap">
   <button class="fab" id="add" type="button">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-    Ajouter une ligne
+    Add a route
   </button>
 </div>
 
@@ -400,14 +400,14 @@ button { cursor: pointer; }
   }
   async function getInfo(route) {
     if (S.info[route]) return S.info[route];
-    if (S.mode === 'demo') return (S.info[route] = { route: route, orig: 'Départ', dest: 'Terminus' });
+    if (S.mode === 'demo') return (S.info[route] = { route: route, orig: 'Origin', dest: 'Terminus' });
     var d = await api('/route/CTB/' + encodeURIComponent(route));
     if (d && d.route) return (S.info[route] = { route: d.route, orig: d.orig_en || d.orig_tc, dest: d.dest_en || d.dest_tc });
     return null;
   }
   async function getStops(route, dir) {
     if (S.mode === 'demo') {
-      return Array.from({ length: 12 }, function (_, i) { return { id: 'demo' + i, seq: i + 1, name: 'Arrêt exemple ' + (i + 1) }; });
+      return Array.from({ length: 12 }, function (_, i) { return { id: 'demo' + i, seq: i + 1, name: 'Sample stop ' + (i + 1) }; });
     }
     var rs = (await api('/route-stop/CTB/' + encodeURIComponent(route) + '/' + dir)) || [];
     rs.sort(function (a, b) { return a.seq - b.seq; });
@@ -416,7 +416,7 @@ button { cursor: pointer; }
       try { var d = await api('/stop/' + s.stop); S.names[s.stop] = (d && (d.name_en || d.name_tc)) || s.stop; } catch (e) {}
     });
     store(false, KEY_NAMES, S.names);
-    return rs.map(function (s) { return { id: s.stop, seq: s.seq, name: S.names[s.stop] || ('Arrêt ' + s.seq) }; });
+    return rs.map(function (s) { return { id: s.stop, seq: s.seq, name: S.names[s.stop] || ('Stop ' + s.seq) }; });
   }
   function hash(str) { var x = 0; for (var i = 0; i < str.length; i++) x = (x * 31 + str.charCodeAt(i)) >>> 0; return x; }
   function demoTimes(l) {
@@ -427,7 +427,7 @@ button { cursor: pointer; }
     var first = Math.ceil((now - offset) / period) * period + offset;
     return [first, first + period, first + 2 * period].map(function (s) { return s * 1000; });
   }
-  var DEMO_STOP = { id: 'demo', name: 'Ton arrêt (exemple)' };
+  var DEMO_STOP = { id: 'demo', name: 'Your stop (sample)' };
   function stopOf(l) { return l.stops[l.dir] || (S.mode === 'demo' ? DEMO_STOP : null); }
   function keyOf(l) { return l.route + '|' + l.dir; }
 
@@ -464,7 +464,7 @@ button { cursor: pointer; }
     var z = h('div', { class: 'eta-zone' });
     var stop = stopOf(l);
     if (!stop) {
-      z.append(h('button', { class: 'cta', type: 'button', on: { click: function () { openSheet({ step: 'stop', route: l.route, dir: l.dir }); } } }, 'Choisir mon arrêt'));
+      z.append(h('button', { class: 'cta', type: 'button', on: { click: function () { openSheet({ step: 'stop', route: l.route, dir: l.dir }); } } }, 'Choose my stop'));
       return z;
     }
     var d = S.data[keyOf(l)];
@@ -472,15 +472,15 @@ button { cursor: pointer; }
     var now = Date.now();
     var ts = (d.times || []).filter(function (t) { return t > now - 30000; });
     if (!ts.length) {
-      z.append(h('p', { class: d.err ? 'note warn' : 'note' }, d.err ? 'Données indisponibles pour le moment. Nouvelle tentative automatique.' : 'Aucun bus annoncé pour le moment.'));
+      z.append(h('p', { class: d.err ? 'note warn' : 'note' }, d.err ? 'Data unavailable right now. Retrying automatically.' : 'No buses scheduled right now.'));
       return z;
     }
     var m = ts.map(function (t) { return mins(t, now); });
     var big = m[0] <= 0
-      ? h('div', { class: 'arrive' }, h('i'), 'Arrive')
+      ? h('div', { class: 'arrive' }, h('i'), 'Arriving')
       : h('div', { class: 'eta-big' }, h('span', { class: 'num' }, String(m[0])), h('span', { class: 'unit' }, 'min'));
     var nextEls = m.slice(1, 3).map(function (v) { return h('span', { class: 'chip' }, v <= 0 ? 'Now' : String(v), v <= 0 ? null : h('em', {}, 'min')); });
-    var main = h('div', { class: 'eta-main' }, big, nextEls.length ? h('div', { class: 'next' }, h('small', {}, 'puis'), nextEls) : null);
+    var main = h('div', { class: 'eta-main' }, big, nextEls.length ? h('div', { class: 'next' }, h('small', {}, 'then'), nextEls) : null);
     var track = h('div', { class: 'tl-track' });
     m.forEach(function (v, i) {
       if (v > 30) return;
@@ -490,23 +490,23 @@ button { cursor: pointer; }
     var tl = h('div', { class: 'tl', 'aria-hidden': 'true' }, track,
       h('div', { class: 'tl-scale' }, h('span', {}, '0'), h('span', {}, '10'), h('span', {}, '20'), h('span', {}, '30 min')));
     z.append(main, tl);
-    if (d.err) z.append(h('p', { class: 'note warn' }, 'Dernière mise à jour impossible, données précédentes affichées.'));
+    if (d.err) z.append(h('p', { class: 'note warn' }, 'Last update failed, showing previous data.'));
     return z;
   }
   function card(l, idx) {
     var info = S.info[l.route];
     var destName = info ? (l.dir === 'outbound' ? info.dest : info.orig) : '…';
     var stop = stopOf(l);
-    var other = l.dir === 'outbound' ? 'retour' : 'aller';
+    var other = l.dir === 'outbound' ? 'return' : 'outbound';
     var el = h('article', { class: 'card', 'data-route': l.route },
       h('div', { class: 'card-head' },
         h('div', { class: 'badge c' + (hash(l.route) % 6) }, l.route),
         h('div', { class: 'head-text' },
-          h('p', { class: 'dest' }, 'vers ' + destName),
-          h('p', { class: 'stop' }, svg(ICON.pin), h('span', {}, stop ? stop.name : 'Arrêt à choisir'))),
+          h('p', { class: 'dest' }, 'to ' + destName),
+          h('p', { class: 'stop' }, svg(ICON.pin), h('span', {}, stop ? stop.name : 'No stop chosen'))),
         h('div', { class: 'head-actions' },
-          h('button', { class: 'mini', type: 'button', 'aria-label': 'Passer au sens ' + other + ' de la ligne ' + l.route, on: { click: function () { swap(l); } } }, svg(ICON.swap)),
-          h('button', { class: 'mini', type: 'button', 'aria-label': 'Options de la ligne ' + l.route, on: { click: function () { openSheet({ step: 'menu', route: l.route, dir: l.dir }); } } }, svg(ICON.more)))),
+          h('button', { class: 'mini', type: 'button', 'aria-label': 'Switch route ' + l.route + ' to ' + other + ' direction', on: { click: function () { swap(l); } } }, svg(ICON.swap)),
+          h('button', { class: 'mini', type: 'button', 'aria-label': 'Route ' + l.route + ' options', on: { click: function () { openSheet({ step: 'menu', route: l.route, dir: l.dir }); } } }, svg(ICON.more)))),
       etaZone(l));
     return el;
   }
@@ -515,9 +515,9 @@ button { cursor: pointer; }
     list.replaceChildren();
     if (!S.lines.length) {
       list.append(h('div', { class: 'card empty-state' },
-        h('h2', {}, 'Aucune ligne'),
-        h('p', {}, 'Ajoute ta première ligne Citybus pour voir les prochains passages ici.'),
-        h('button', { class: 'cta', type: 'button', on: { click: function () { openSheet({ step: 'line' }); } } }, 'Ajouter une ligne')));
+        h('h2', {}, 'No routes'),
+        h('p', {}, 'Add your first Citybus route to see upcoming arrivals here.'),
+        h('button', { class: 'cta', type: 'button', on: { click: function () { openSheet({ step: 'line' }); } } }, 'Add a route')));
       return;
     }
     S.lines.forEach(function (l, i) { list.append(card(l, i)); });
@@ -534,7 +534,7 @@ button { cursor: pointer; }
   function swap(l) {
     l.dir = l.dir === 'outbound' ? 'inbound' : 'outbound';
     persist(); render();
-    if (!stopOf(l)) openSheet({ step: 'stop', route: l.route, dir: l.dir, hint: 'Choisis ton arrêt pour ce sens.' });
+    if (!stopOf(l)) openSheet({ step: 'stop', route: l.route, dir: l.dir, hint: 'Choose your stop for this direction.' });
     else refreshLine(l).then(render);
   }
   function persist() { store(false, KEY_LINES, S.lines); }
@@ -542,19 +542,19 @@ button { cursor: pointer; }
   /* ---------- Header ---------- */
   function paintClock() {
     var d = new Date();
-    var date = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Hong_Kong' }).format(d);
-    var time = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Hong_Kong' }).format(d);
+    var date = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Hong_Kong' }).format(d);
+    var time = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Hong_Kong' }).format(d);
     var up = '';
     if (S.updatedAt) {
       var s = Math.round((Date.now() - S.updatedAt) / 1000);
-      up = s < 8 ? ' · à jour' : ' · mis à jour il y a ' + (s < 90 ? s + ' s' : Math.round(s / 60) + ' min');
+      up = s < 8 ? ' · up to date' : ' · updated ' + (s < 90 ? s + ' s' : Math.round(s / 60) + ' min') + ' ago';
     }
     $('#clock').textContent = date + ' · ' + time + up;
   }
   function paintStatus() {
     var st = $('#status');
     st.setAttribute('data-mode', S.mode);
-    $('#statusText').textContent = S.mode === 'live' ? 'Direct' : S.mode === 'demo' ? 'Démo' : 'Connexion';
+    $('#statusText').textContent = S.mode === 'live' ? 'Live' : S.mode === 'demo' ? 'Demo' : 'Connecting';
     $('#refresh').classList.toggle('spin', S.busy);
     $('#banner').hidden = S.mode !== 'demo';
   }
@@ -575,9 +575,9 @@ button { cursor: pointer; }
   }
   function head(title, back) {
     return h('div', { class: 'panel-head' },
-      back ? h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Retour', on: { click: back } }, svg(ICON.back)) : null,
+      back ? h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Back', on: { click: back } }, svg(ICON.back)) : null,
       h('h2', { id: 'sheetTitle' }, title),
-      h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Fermer', on: { click: closeSheet } }, svg(ICON.close)));
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Close', on: { click: closeSheet } }, svg(ICON.close)));
   }
   function setPanel(headEl, body) {
     var p = $('#panel');
@@ -594,76 +594,76 @@ button { cursor: pointer; }
 
   function drawLine(c) {
     var err = h('p', { class: 'err', hidden: !c.error }, c.error || '');
-    var input = h('input', { class: 'input', id: 'routeInput', type: 'text', autocapitalize: 'characters', autocomplete: 'off', autocorrect: 'off', spellcheck: 'false', enterkeyhint: 'go', maxlength: '6', placeholder: 'ex. 37A', 'aria-label': 'Numéro de ligne' });
-    var go = h('button', { class: 'cta', type: 'submit' }, 'Suivant');
+    var input = h('input', { class: 'input', id: 'routeInput', type: 'text', autocapitalize: 'characters', autocomplete: 'off', autocorrect: 'off', spellcheck: 'false', enterkeyhint: 'go', maxlength: '6', placeholder: 'e.g. 37A', 'aria-label': 'Route number' });
+    var go = h('button', { class: 'cta', type: 'submit' }, 'Next');
     var form = h('form', { class: 'field', on: { submit: function (e) { e.preventDefault(); chooseRoute(input.value, err, go); } } }, input, go);
     var chips = h('div', { class: 'chips' }, PRESETS.map(function (r) {
       return h('button', { class: 'pick-chip', type: 'button', on: { click: function () { chooseRoute(r, err, go); } } }, r);
     }));
-    setPanel(head('Ajouter une ligne'),
-      [h('label', { class: 'lbl', for: 'routeInput' }, 'Numéro de ligne Citybus'), form, err,
-       h('span', { class: 'lbl' }, 'Raccourcis'), chips]);
+    setPanel(head('Add a route'),
+      [h('label', { class: 'lbl', for: 'routeInput' }, 'Citybus route number'), form, err,
+       h('span', { class: 'lbl' }, 'Shortcuts'), chips]);
     setTimeout(function () { try { input.focus(); } catch (e) {} }, 60);
   }
   async function chooseRoute(raw, errEl, btn) {
     var route = String(raw || '').trim().toUpperCase().replace(/\s+/g, '');
-    if (!route) { errEl.hidden = false; errEl.textContent = 'Saisis un numéro de ligne.'; return; }
-    btn.disabled = true; btn.textContent = 'Recherche…';
+    if (!route) { errEl.hidden = false; errEl.textContent = 'Enter a route number.'; return; }
+    btn.disabled = true; btn.textContent = 'Searching…';
     var tok = S.token;
     try {
       var info = await getInfo(route);
       if (tok !== S.token) return;
-      if (!info) { errEl.hidden = false; errEl.textContent = 'La ligne ' + route + ' n’existe pas chez Citybus.'; btn.disabled = false; btn.textContent = 'Suivant'; return; }
+      if (!info) { errEl.hidden = false; errEl.textContent = 'Route ' + route + ' doesn’t exist at Citybus.'; btn.disabled = false; btn.textContent = 'Next'; return; }
       S.sheet = { step: 'dir', route: info.route || route };
       draw();
     } catch (e) {
       if (tok !== S.token) return;
-      errEl.hidden = false; errEl.textContent = 'Connexion impossible. Vérifie ton réseau puis réessaie.';
-      btn.disabled = false; btn.textContent = 'Suivant';
+      errEl.hidden = false; errEl.textContent = 'Can’t connect. Check your network and try again.';
+      btn.disabled = false; btn.textContent = 'Next';
     }
   }
   function drawDir(c) {
-    var info = S.info[c.route] || { orig: 'Départ', dest: 'Terminus' };
+    var info = S.info[c.route] || { orig: 'Origin', dest: 'Terminus' };
     function btn(dir, dest, orig) {
       return h('button', { class: 'dir-btn', type: 'button', on: { click: function () { S.sheet = { step: 'stop', route: c.route, dir: dir, back: 'dir' }; draw(); } } },
-        h('strong', {}, 'vers ' + dest), h('span', {}, 'depuis ' + orig));
+        h('strong', {}, 'to ' + dest), h('span', {}, 'from ' + orig));
     }
-    setPanel(head('Ligne ' + c.route, function () { S.sheet = { step: 'line' }; draw(); }),
-      [h('span', { class: 'lbl' }, 'Quel sens ?'), btn('outbound', info.dest, info.orig), btn('inbound', info.orig, info.dest)]);
+    setPanel(head('Route ' + c.route, function () { S.sheet = { step: 'line' }; draw(); }),
+      [h('span', { class: 'lbl' }, 'Which direction?'), btn('outbound', info.dest, info.orig), btn('inbound', info.orig, info.dest)]);
   }
   function drawStop(c) {
     var line = S.lines.find(function (x) { return x.route === c.route; });
     var current = line && line.stops[c.dir] ? line.stops[c.dir].id : null;
     var info = S.info[c.route];
-    var title = 'Ton arrêt · ' + c.route;
+    var title = 'Your stop · ' + c.route;
     var back = c.back === 'dir' ? function () { S.sheet = { step: 'dir', route: c.route }; draw(); } : null;
     var listEl = h('ol', { class: 'stops' });
-    var filter = h('input', { class: 'input', id: 'stopFilter', type: 'search', autocomplete: 'off', placeholder: 'Filtrer par nom d’arrêt', 'aria-label': 'Filtrer les arrêts', style: 'font-size:17px;height:50px' });
-    var state = h('p', { class: 'note' }, 'Chargement des arrêts…');
+    var filter = h('input', { class: 'input', id: 'stopFilter', type: 'search', autocomplete: 'off', placeholder: 'Filter by stop name', 'aria-label': 'Filter stops', style: 'font-size:17px;height:50px' });
+    var state = h('p', { class: 'note' }, 'Loading stops…');
     var stops = [];
     function paintList() {
       var q = filter.value.trim().toLowerCase();
       listEl.replaceChildren();
       stops.filter(function (s) { return !q || s.name.toLowerCase().indexOf(q) !== -1; }).forEach(function (s) {
         listEl.append(h('li', {}, h('button', { class: 'stop-btn', type: 'button', 'aria-current': s.id === current ? 'true' : null, on: { click: function () { choose(c, s); } } },
-          s.name, h('small', {}, 'Arrêt n° ' + s.seq))));
+          s.name, h('small', {}, 'Stop no. ' + s.seq))));
       });
     }
     filter.addEventListener('input', paintList);
-    var dirTxt = info ? 'Sens : vers ' + (c.dir === 'outbound' ? info.dest : info.orig) : '';
+    var dirTxt = info ? 'Direction: to ' + (c.dir === 'outbound' ? info.dest : info.orig) : '';
     setPanel(head(title, back), [c.hint ? h('p', { class: 'note' }, c.hint) : null, dirTxt ? h('p', { class: 'note' }, dirTxt) : null, filter, state, listEl]);
     var tok = S.token;
     getStops(c.route, c.dir).then(function (r) {
       if (tok !== S.token) return;
       stops = r;
       state.hidden = r.length > 0;
-      if (!r.length) { state.hidden = false; state.textContent = 'Aucun arrêt trouvé pour ce sens.'; }
+      if (!r.length) { state.hidden = false; state.textContent = 'No stops found for this direction.'; }
       paintList();
       var cur = listEl.querySelector('[aria-current="true"]');
       if (cur) cur.scrollIntoView({ block: 'center' });
     }).catch(function () {
       if (tok !== S.token) return;
-      state.className = 'err'; state.textContent = 'Impossible de charger les arrêts. Réessaie dans un instant.';
+      state.className = 'err'; state.textContent = 'Couldn’t load stops. Try again in a moment.';
     });
   }
   function choose(c, stop) {
@@ -680,11 +680,11 @@ button { cursor: pointer; }
       if (!c.sure) { S.sheet = { step: 'menu', route: c.route, dir: c.dir, sure: true }; draw(); return; }
       S.lines = S.lines.filter(function (x) { return x.route !== c.route; });
       persist(); closeSheet(); render();
-    } } }, c.sure ? 'Appuie encore pour supprimer la ligne ' + c.route : 'Supprimer la ligne ' + c.route);
+    } } }, c.sure ? 'Tap again to remove route ' + c.route : 'Remove route ' + c.route);
     if (c.sure) del.className = 'menu-btn sure';
-    setPanel(head('Ligne ' + c.route),
-      [h('button', { class: 'menu-btn', type: 'button', on: { click: function () { S.sheet = { step: 'stop', route: c.route, dir: l.dir }; draw(); } } }, 'Changer l’arrêt de ce sens'),
-       h('button', { class: 'menu-btn', type: 'button', on: { click: function () { closeSheet(); swap(l); } } }, 'Passer à l’autre sens'),
+    setPanel(head('Route ' + c.route),
+      [h('button', { class: 'menu-btn', type: 'button', on: { click: function () { S.sheet = { step: 'stop', route: c.route, dir: l.dir }; draw(); } } }, 'Change stop for this direction'),
+       h('button', { class: 'menu-btn', type: 'button', on: { click: function () { closeSheet(); swap(l); } } }, 'Switch direction'),
        del]);
   }
 
