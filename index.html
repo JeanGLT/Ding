@@ -432,9 +432,9 @@ button { cursor: pointer; }
   function keyOf(l) { return l.route + '|' + l.dir; }
 
   async function refreshLine(l) {
+    try { await getInfo(l.route); } catch (e) {}
     var stop = stopOf(l);
     if (!stop) return;
-    try { await getInfo(l.route); } catch (e) {}
     var key = keyOf(l);
     if (S.mode === 'demo') { S.data[key] = { times: demoTimes(l), at: Date.now() }; return; }
     try {
